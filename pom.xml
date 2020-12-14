@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.3.6.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.lb.springboot</groupId>
+	<artifactId>springboot-quickstart-001</artifactId>
+	<version>1.0.0</version>
+	<name>springboot-quickstart-001</name>
+	<description>springboot-quickstart-001</description>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<!-- profile配置切换. 使用maven命令： mvn clean install -P local （ dev 、 qa 、 pro ） -->
+	<profiles>
+		<!-- 开发环境配置 -->
+		<profile>
+			<id>dev</id>
+			<activation>
+				<!-- 设置本profile为默认配置，在进行Maven打包时不指定-P参数，使用 dev的配置进行打包 -->
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-undertow</artifactId>
+				</dependency>
+			</dependencies>
+			<properties>
+				<!-- /src/main/resources/application.properties 中的配置-->
+				<spring.profiles.active>dev</spring.profiles.active>
+				<!-- 跟随环境变化的自定义参数 -->
+				<lb.env.dynamic.attr>2020-12-12-dev</lb.env.dynamic.attr>
+			</properties>
+		</profile>
+		<!-- 生产环境配置 -->
+		<profile>
+			<id>pro</id>
+			<dependencies>
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-undertow</artifactId>
+				</dependency>
+			</dependencies>
+			<properties>
+				<spring.profiles.active>pro</spring.profiles.active>
+				<!-- 动态参数 -->
+				<lb.env.dynamic.attr>2020-12-15-pro</lb.env.dynamic.attr>
+			</properties>
+		</profile>
+	</profiles>
+
+
+
+	<!-- maven插件说明：
+	maven-compiler-plugin用来编译Java代码；
+	maven-resources-plugin用来处理资源文件；
+	maven-surefire-plugin用来忽略测试用例的插件；
+	maven-source-plugin用来将工程的源代码进行源文件的打包；
+	 -->
+	<build>
+		<!-- 最终打出来的jar包名称 -->
+		<finalName>lb-springboot-quickstart</finalName>
+		<plugins>
+			<!-- springboot的maven插件 -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- 解决maven update project 后JDK版本降低为1.5的bug -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<!-- 打包时忽略单元测试文件，防止由于单元测试编写错误导致打包失败的情况 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+					<includes>
+						<include>**/*Test*.java</include>
+					</includes>
+					<testFailureIgnore>true</testFailureIgnore>
+				</configuration>
+			</plugin>
+			<!-- 需要对于Maven工程的源代码进行源文件的打包，可以利用source插件来完成，在install时，会同时将源码包安装到本地仓库 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<!-- 绑定到特定的生命周期之后，运行maven-source-pluin 运行目标为jar-no-fork -->
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- maven-resources-plugin用来处理资源文件 -->
+			<!-- 利用此插件实现Maven动态打包: mvn clean install -P pro/dev/local -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-resources</id>
+						<phase>validate</phase>
+						<!-- goals包含以下三种配置项：
+						1. resources:resources，拷贝main resources到main output directory。它绑定了process-resources生命周期阶段，当执行Compiler:compile插件目标前就会执行此阶段。
+    					2. resources:testResources，拷贝test resources到test output directory。它绑定了process-test-resources生命周期阶段，当执行surefire:test插件目标前就会执行此阶段。
+    					3. resources:copy-resources，手动拷贝资源到输出目录 -->
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>target/classes</outputDirectory>
+							<useDefaultDelimiters>false</useDefaultDelimiters>
+							<delimiters>
+								<delimiter>$</delimiter>
+							</delimiters>
+							<resources>
+								<!-- 打包时包含properties、xml 
+								比如mybatis的mapper.xml文件，我们习惯把它和Mapper.java放一起，都在src/main/java下面，
+								这样利用maven打包时，就需要修改pom.xml文件，来把mapper.xml文件一起打包进jar或者war -->
+								<resource>
+									<!-- 是否替换资源中的属性 -->
+									<filtering>true</filtering>
+									<directory>src/main/java</directory>
+									<includes>
+										<include>**/*.properties</include>
+										<include>**/*.xml</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>src/main/resources/</directory>
+									<filtering>true</filtering>
+									<includes>
+										<include>**/*.xml</include>
+										<include>**/*.yml</include>
+										<include>**/*.properties</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+	
+	
+	<!-- 依赖仓库 -->
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+</project>
